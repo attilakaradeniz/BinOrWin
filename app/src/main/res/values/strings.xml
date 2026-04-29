@@ -1,3 +1,5 @@
 <resources>
     <string name="app_name">BinOrWin</string>
+    <string name="greeting_name">Android</string>
+    <string name="hello_message">Hello %s!</string>
 </resources>
