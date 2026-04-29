@@ -1,6 +1,11 @@
 package com.example.binorwin.ui.components
 
+import android.net.Uri
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.PickVisualMediaRequest
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.*
@@ -13,10 +18,10 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Path
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
-import com.example.binorwin.ui.theme.BinOrWinTheme
+import coil.compose.AsyncImage
 import kotlin.random.Random
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -37,6 +42,15 @@ fun PostCard() {
     val rustIntensity = if (winRatio < 0.5f) (0.5f - winRatio) * 2 else 0f
     val shineIntensity = if (winRatio > 0.5f) (winRatio - 0.5f) * 2 else 0f
 
+    // State to hold the selected image URI
+    var selectedImageUri by remember { mutableStateOf<Uri?>(null) }
+
+    // The launcher that opens the Android Photo Picker
+    val photoPickerLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.PickVisualMedia(),
+        onResult = { uri -> selectedImageUri = uri }
+    )
+
     Card(
         modifier = Modifier
             .fillMaxWidth()
@@ -47,13 +61,19 @@ fun PostCard() {
             modifier = Modifier.padding(16.dp),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            // The Image Box with CUSTOM DRAWING (Canvas)
+            // The Image Box with CUSTOM DRAWING (Canvas) AND PHOTO PICKER
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
                     .height(250.dp)
                     .clip(RoundedCornerShape(8.dp))
                     .background(Color(0xFFE0E0E0))
+                    // THIS IS THE CRITICAL PART WE ADDED: Make it clickable!
+                    .clickable {
+                        photoPickerLauncher.launch(
+                            PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly)
+                        )
+                    }
                     .drawWithContent {
                         // 1. Draw the actual content (the image/text) first
                         drawContent()
@@ -63,29 +83,25 @@ fun PostCard() {
 
                         // 2. Draw RUST EFFECT if binVotes are higher
                         if (rustIntensity > 0f) {
-                            // Seeded random so spots don't jitter on every frame
                             val random = Random(42)
                             val spotCount = (30 * rustIntensity).toInt() + 10
 
                             for (i in 0 until spotCount) {
-                                // Randomly pick an edge (0: Top, 1: Right, 2: Bottom, 3: Left)
                                 val edge = random.nextInt(4)
                                 val cx = when (edge) {
-                                    1 -> w // Right edge
-                                    3 -> 0f // Left edge
+                                    1 -> w
+                                    3 -> 0f
                                     else -> random.nextFloat() * w
                                 }
                                 val cy = when (edge) {
-                                    0 -> 0f // Top edge
-                                    2 -> h // Bottom edge
+                                    0 -> 0f
+                                    2 -> h
                                     else -> random.nextFloat() * h
                                 }
 
-                                // Random radius that scales with intensity
                                 val maxRadius = 40f * rustIntensity
                                 val radius = random.nextFloat() * maxRadius + 10f
 
-                                // Random rust colors (Dark browns, oranges)
                                 val rustColor = listOf(
                                     Color(0xFF5D4037),
                                     Color(0xFF8D6E63),
@@ -93,7 +109,6 @@ fun PostCard() {
                                     Color(0xFFBF360C)
                                 ).random(random)
 
-                                // Draw irregular circles that bleed inside and outside
                                 drawCircle(
                                     color = rustColor.copy(alpha = 0.7f),
                                     radius = radius,
@@ -104,7 +119,6 @@ fun PostCard() {
 
                         // 3. Draw SHINE EFFECT if winVotes are higher
                         if (shineIntensity > 0f) {
-                            // Draw multiple semi-transparent strokes for a "Glow"
                             val baseThickness = 10f * shineIntensity
                             for (i in 1..3) {
                                 drawRect(
@@ -115,7 +129,6 @@ fun PostCard() {
                                 )
                             }
 
-                            // Draw a sharp inner gold border
                             drawRect(
                                 color = Color(0xFFFFCA28),
                                 topLeft = Offset.Zero,
@@ -123,28 +136,39 @@ fun PostCard() {
                                 style = androidx.compose.ui.graphics.drawscope.Stroke(width = baseThickness)
                             )
 
-                            // Draw a "Light Flare" (Star shape) at the top right corner
                             val flareCenter = Offset(w - 20f, 20f)
                             val flareSize = 50f * shineIntensity
 
                             val path = Path().apply {
-                                moveTo(flareCenter.x, flareCenter.y - flareSize) // Top
-                                quadraticTo(flareCenter.x, flareCenter.y, flareCenter.x + flareSize, flareCenter.y) // Right
-                                quadraticTo(flareCenter.x, flareCenter.y, flareCenter.x, flareCenter.y + flareSize) // Bottom
-                                quadraticTo(flareCenter.x, flareCenter.y, flareCenter.x - flareSize, flareCenter.y) // Left
+                                moveTo(flareCenter.x, flareCenter.y - flareSize)
+                                quadraticTo(flareCenter.x, flareCenter.y, flareCenter.x + flareSize, flareCenter.y)
+                                quadraticTo(flareCenter.x, flareCenter.y, flareCenter.x, flareCenter.y + flareSize)
+                                quadraticTo(flareCenter.x, flareCenter.y, flareCenter.x - flareSize, flareCenter.y)
                                 close()
                             }
                             drawPath(
                                 path = path,
                                 color = Color.White.copy(alpha = 0.8f)
                             )
-                            // Core of the flare
                             drawCircle(color = Color.White, radius = 5f * shineIntensity, center = flareCenter)
                         }
                     },
                 contentAlignment = Alignment.Center
             ) {
-                Text("Item Image Placeholder", color = Color.DarkGray)
+                // THIS IS THE SECOND CRITICAL PART: Show image if selected!
+                if (selectedImageUri != null) {
+                    AsyncImage(
+                        model = selectedImageUri,
+                        contentDescription = "Selected Item",
+                        modifier = Modifier.fillMaxSize(),
+                        contentScale = ContentScale.Crop
+                    )
+                } else {
+                    Text(
+                        text = "Tap to add an image",
+                        color = Color.DarkGray
+                    )
+                }
             }
 
             Spacer(modifier = Modifier.height(8.dp))
