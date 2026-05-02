@@ -1,6 +1,15 @@
+import java.util.Properties
+import java.io.FileInputStream
+
 plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.compose)
+}
+// load local.properties to read secret values
+val localProperties = Properties()
+val localPropertiesFile = rootProject.file("local.properties")
+if (localPropertiesFile.exists()) {
+    localProperties.load(FileInputStream(localPropertiesFile))
 }
 
 android {
@@ -19,6 +28,16 @@ android {
         versionName = "1.0"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
+
+        // Pass the API URL from local.properties to the generated BuildConfig class
+        val apiUrl = localProperties.getProperty("API_BASE_URL") ?: "http://100.112.97.88:8000/"
+        // Trim any existing quotes from the property value and wrap in quotes for Java
+        buildConfigField("String", "API_BASE_URL", "\"${apiUrl.trim('\"')}\"")
+    }
+
+    // Enable the generation of BuildConfig class
+    buildFeatures {
+        buildConfig = true
     }
 
     buildTypes {
@@ -57,4 +76,8 @@ dependencies {
     debugImplementation(libs.androidx.compose.ui.tooling)
     // Image loading library for Compose
     implementation("io.coil-kt:coil-compose:2.6.0")
+    // Retrofit library for making network requests to our API
+    implementation("com.squareup.retrofit2:retrofit:2.9.0")
+    // Gson converter to automatically parse JSON responses into Kotlin data classes
+    implementation("com.squareup.retrofit2:converter-gson:2.9.0")
 }
