@@ -6,6 +6,7 @@ data class Argument(
     val id: Int,
     @SerializedName("post_id") val postId: Int,
     @SerializedName("action_type") val actionType: String,
+    @SerializedName("created_at") val createdAt: String? = null,
     val content: String
 )
 

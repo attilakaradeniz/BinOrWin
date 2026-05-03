@@ -6,7 +6,8 @@ data class Post(
     val title: String,
     @SerializedName("image_url") val imageUrl: String,
     @SerializedName("bin_votes") val binVotes: Int,
-    @SerializedName("win_votes") val winVotes: Int
+    @SerializedName("win_votes") val winVotes: Int,
+    @SerializedName("created_at") val createdAt: String? = null
 )
 
 // Data class for post

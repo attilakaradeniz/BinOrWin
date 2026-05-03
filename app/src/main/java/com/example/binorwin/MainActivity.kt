@@ -7,43 +7,73 @@ import androidx.activity.viewModels
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.*
-import androidx.compose.runtime.Composable
+import androidx.compose.material3.pulltorefresh.PullToRefreshBox
+import androidx.compose.runtime.*
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.unit.dp
 import coil.compose.AsyncImage
-import androidx.activity.enableEdgeToEdge
-import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.padding
-import androidx.compose.material3.Scaffold
-
-import com.example.binorwin.ui.components.PostCard
-import com.example.binorwin.ui.theme.BinOrWinTheme
-
-
 import com.example.binorwin.model.Post
+import com.example.binorwin.ui.theme.BinOrWinTheme
 
 class MainActivity : ComponentActivity() {
 
-    // ViewModel'i oluşturuyoruz
+    // Initialize the ViewModel
     private val viewModel: MainViewModel by viewModels()
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContent {
-            // Buradaki tema isminin 'ui.theme' klasöründeki dosya ile aynı olduğundan emin ol
             BinOrWinTheme {
-                Surface(
-                    modifier = Modifier.fillMaxSize(),
-                    color = MaterialTheme.colorScheme.background
+                MainScreen(viewModel = viewModel)
+            }
+        }
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun MainScreen(viewModel: MainViewModel) {
+    // Scaffold provides the structure for the TopBar
+    Scaffold(
+        topBar = {
+            TopAppBar(
+                title = { Text("Bin Or Win Feed") },
+                colors = TopAppBarDefaults.topAppBarColors(
+                    containerColor = MaterialTheme.colorScheme.primaryContainer,
+                    titleContentColor = MaterialTheme.colorScheme.onPrimaryContainer
+                )
+            )
+        }
+    ) { paddingValues ->
+        // PullToRefreshBox handles the swipe-down-to-refresh action
+        PullToRefreshBox(
+            isRefreshing = viewModel.isRefreshing,
+            onRefresh = { viewModel.refreshPosts() },
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(paddingValues)
+        ) {
+            if (viewModel.posts.isEmpty()) {
+                // Show a message if the feed is empty
+                Box(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .verticalScroll(rememberScrollState()),
+                    contentAlignment = Alignment.Center
                 ) {
-                    PostList(
-                        posts = viewModel.posts,
-                        onVote = { postId, type -> viewModel.vote(postId, type) }
-                    )
+                    Text("No posts yet. Pull to refresh or check server connection.")
                 }
+            } else {
+                // Display the feed
+                PostList(
+                    posts = viewModel.posts,
+                    onVote = { postId, type -> viewModel.vote(postId, type) }
+                )
             }
         }
     }
@@ -51,12 +81,6 @@ class MainActivity : ComponentActivity() {
 
 @Composable
 fun PostList(posts: List<Post>, onVote: (Int, String) -> Unit) {
-
-    if(posts.isEmpty()){
-        Box(modifier = Modifier.fillMaxSize(), contentAlignment = androidx.compose.ui.Alignment.Center){
-            Text("Not a post yet... or connection failed...")
-        }
-    } else
     LazyColumn(
         modifier = Modifier.fillMaxSize(),
         contentPadding = PaddingValues(16.dp),
@@ -82,7 +106,7 @@ fun PostCard(post: Post, onVote: (Int, String) -> Unit) {
 
             Spacer(modifier = Modifier.height(8.dp))
 
-            // Coil kütüphanesi ile resmi internetten çekiyoruz
+            // Fetch and display image from the network using Coil
             AsyncImage(
                 model = post.imageUrl,
                 contentDescription = "Post Image",

@@ -1,6 +1,9 @@
 package com.example.binorwin
 
+import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateListOf
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.binorwin.model.Post
@@ -11,6 +14,10 @@ class MainViewModel : ViewModel() {
     // A reactive list that the UI will observe
     val posts = mutableStateListOf<Post>()
 
+    // State to track if the list is currently being refreshed via swipe
+    var isRefreshing by mutableStateOf(false)
+        private set
+
     init {
         // Fetch posts automatically when the ViewModel is created
         refreshPosts()
@@ -18,6 +25,7 @@ class MainViewModel : ViewModel() {
 
     fun refreshPosts() {
         viewModelScope.launch {
+            isRefreshing = true
             try {
                 val fetchedPosts = RetrofitClient.apiService.getPosts()
                 posts.clear()
@@ -25,6 +33,9 @@ class MainViewModel : ViewModel() {
             } catch (e: Exception) {
                 // Handle errors (like network being down) here
                 e.printStackTrace()
+            } finally {
+                // Always stop the refreshing animation regardless of success or failure
+                isRefreshing = false
             }
         }
     }
