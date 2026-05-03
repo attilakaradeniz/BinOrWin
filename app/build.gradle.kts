@@ -80,4 +80,6 @@ dependencies {
     implementation("com.squareup.retrofit2:retrofit:2.9.0")
     // Gson converter to automatically parse JSON responses into Kotlin data classes
     implementation("com.squareup.retrofit2:converter-gson:2.9.0")
+    // Library for extended Material Design icons like Send, Person, etc.
+    implementation("androidx.compose.material:material-icons-extended")
 }
