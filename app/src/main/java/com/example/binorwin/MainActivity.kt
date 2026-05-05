@@ -30,6 +30,10 @@ class MainActivity : ComponentActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+
+        // Initialize RetrofitClient with the application context
+        com.example.binorwin.network.RetrofitClient.init(this)
+
         setContent {
             BinOrWinTheme {
                 MainScreen(viewModel = viewModel)

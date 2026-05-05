@@ -9,6 +9,11 @@ import retrofit2.http.GET
 import retrofit2.http.POST
 import retrofit2.http.Path
 import retrofit2.http.Query
+import com.example.binorwin.model.TokenResponse
+import com.example.binorwin.model.UserCreate
+import com.example.binorwin.model.UserResponse
+import retrofit2.http.Field
+import retrofit2.http.FormUrlEncoded
 
 // defining all API endpoints in FastAPI
 interface ApiService {
@@ -40,4 +45,16 @@ interface ApiService {
         @Path("post_id") postId: Int,
         @Body argument: ArgumentCreate
     ): Argument
+
+    // Send user data as a JSON body to create a new account
+    @POST("signup")
+    suspend fun signup(@Body user: UserCreate): UserResponse
+
+    // FastAPI's OAuth2 implementation strictly expects form data (FormUrlEncoded) for login, NOT a JSON body!
+    @FormUrlEncoded
+    @POST("login")
+    suspend fun login(
+        @Field("username") username: String,
+        @Field("password") password: String
+    ): TokenResponse
 }
