@@ -19,24 +19,79 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.unit.dp
+import androidx.navigation.compose.NavHost
+import androidx.navigation.compose.composable
+import androidx.navigation.compose.rememberNavController
 import coil.compose.AsyncImage
 import com.example.binorwin.model.Argument
 import com.example.binorwin.model.Post
+import com.example.binorwin.network.RetrofitClient
+import com.example.binorwin.ui.components.LoginScreen
+import com.example.binorwin.ui.components.SignupScreen
+//import com.example.binorwin.ui.LoginScreen
+//import com.example.binorwin.ui.SignupScreen
 import com.example.binorwin.ui.theme.BinOrWinTheme
+import com.example.binorwin.viewmodel.AuthViewModel
 
 class MainActivity : ComponentActivity() {
 
+    // Existing ViewModel for the Feed
     private val viewModel: MainViewModel by viewModels()
+    // Create the AuthViewModel that will be shared across auth screens
+    private val authViewModel: AuthViewModel by viewModels()
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
         // Initialize RetrofitClient with the application context
-        com.example.binorwin.network.RetrofitClient.init(this)
+        RetrofitClient.init(this)
+
+        // Traffic Cop: Determine where the user should start
+        // If they have a token, go to "feed", otherwise go to "login"
+        val startDestination = if (RetrofitClient.isLoggedIn()) "feed" else "login"
 
         setContent {
             BinOrWinTheme {
-                MainScreen(viewModel = viewModel)
+                // Create the Navigation Controller
+                val navController = rememberNavController()
+
+                // Set up the routes
+                NavHost(navController = navController, startDestination = startDestination) {
+
+                    // --- LOGIN ROUTE ---
+                    composable("login") {
+                        LoginScreen(
+                            viewModel = authViewModel,
+                            onNavigateToSignup = { navController.navigate("signup") },
+                            onLoginSuccess = {
+                                // If login succeeds, go to feed and remove login from backstack (so back button closes app)
+                                navController.navigate("feed") {
+                                    popUpTo("login") { inclusive = true }
+                                }
+                            }
+                        )
+                    }
+
+                    // --- SIGNUP ROUTE ---
+                    composable("signup") {
+                        SignupScreen(
+                            viewModel = authViewModel,
+                            onNavigateToLogin = { navController.navigate("login") },
+                            onSignupSuccess = {
+                                // If signup succeeds (which also logs them in), go to feed
+                                navController.navigate("feed") {
+                                    popUpTo("signup") { inclusive = true }
+                                }
+                            }
+                        )
+                    }
+
+                    // --- FEED ROUTE (Your existing main app) ---
+                    composable("feed") {
+                        // Call your existing MainScreen here
+                        MainScreen(viewModel = viewModel)
+                    }
+                }
             }
         }
     }
