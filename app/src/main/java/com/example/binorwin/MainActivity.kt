@@ -204,6 +204,14 @@ fun PostCard(post: Post, onVote: (Int, String) -> Unit, onDiscussClick: () -> Un
         Column(modifier = Modifier.padding(16.dp)) {
             Text(text = post.title, style = MaterialTheme.typography.headlineSmall)
 
+            // NEW: Display the owner of the post
+            val ownerName = post.owner?.username ?: "Unknown User"
+            Text(
+                text = "Posted by: $ownerName",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+
             Spacer(modifier = Modifier.height(8.dp))
 
             AsyncImage(
@@ -289,6 +297,7 @@ fun ArgumentBottomSheetContent(
                         modifier = Modifier.fillMaxWidth()
                     ) {
                         Column(modifier = Modifier.padding(12.dp)) {
+                            val argOwner = arg.owner?.username ?: "Anonymous"
                             Text(
                                 text = if (arg.actionType == "win") "WIN Argument" else "BIN Argument",
                                 style = MaterialTheme.typography.labelSmall,
