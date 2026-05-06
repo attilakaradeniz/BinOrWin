@@ -14,6 +14,8 @@ import com.example.binorwin.model.UserCreate
 import com.example.binorwin.model.UserResponse
 import retrofit2.http.Field
 import retrofit2.http.FormUrlEncoded
+import retrofit2.http.PUT
+import retrofit2.http.DELETE
 
 // defining all API endpoints in FastAPI
 interface ApiService {
@@ -57,4 +59,17 @@ interface ApiService {
         @Field("username") username: String,
         @Field("password") password: String
     ): TokenResponse
+
+    // Update an existing argument
+    @PUT("arguments/{argument_id}")
+    suspend fun updateArgument(
+        @Path("argument_id") argumentId: Int,
+        @Body argument: ArgumentCreate
+    ): Argument
+
+    // Delete an argument
+    @DELETE("arguments/{argument_id}")
+    suspend fun deleteArgument(
+        @Path("argument_id") argumentId: Int
+    )
 }

@@ -84,4 +84,32 @@ class MainViewModel : ViewModel() {
             }
         }
     }
+
+    // Function to delete an argument and refresh the list
+    fun deleteArgument(postId: Int, argumentId: Int) {
+        viewModelScope.launch {
+            try {
+                com.example.binorwin.network.RetrofitClient.apiService.deleteArgument(argumentId)
+                // Refresh the arguments list after deleting
+                fetchArguments(postId)
+            } catch (e: Exception) {
+                // Handle error (e.g., show a toast)
+            }
+        }
+    }
+
+    // Function to update an argument and refresh the list
+    fun updateArgument(postId: Int, argumentId: Int, actionType: String, content: String) {
+        viewModelScope.launch {
+            try {
+                val updatedArg = com.example.binorwin.model.ArgumentCreate(actionType, content)
+                com.example.binorwin.network.RetrofitClient.apiService.updateArgument(argumentId, updatedArg)
+                // Refresh the arguments list after editing
+                fetchArguments(postId)
+            } catch (e: Exception) {
+                // Handle error
+            }
+        }
+    }
+
 }

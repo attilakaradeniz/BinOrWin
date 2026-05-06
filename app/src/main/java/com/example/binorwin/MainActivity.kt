@@ -9,11 +9,12 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material3.Icon
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.Edit
+import androidx.compose.material.icons.filled.ExitToApp
 import androidx.compose.material.icons.filled.Send
 import androidx.compose.material3.*
-import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -28,44 +29,41 @@ import com.example.binorwin.model.Post
 import com.example.binorwin.network.RetrofitClient
 import com.example.binorwin.ui.components.LoginScreen
 import com.example.binorwin.ui.components.SignupScreen
-//import com.example.binorwin.ui.LoginScreen
-//import com.example.binorwin.ui.SignupScreen
 import com.example.binorwin.ui.theme.BinOrWinTheme
 import com.example.binorwin.viewmodel.AuthViewModel
-import androidx.compose.material.icons.filled.ExitToApp
 
 class MainActivity : ComponentActivity() {
 
-    // Existing ViewModel for the Feed
+    // ViewModel for the Feed
     private val viewModel: MainViewModel by viewModels()
-    // Create the AuthViewModel that will be shared across auth screens
+    // AuthViewModel that will be shared across auth screens
     private val authViewModel: AuthViewModel by viewModels()
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
-        // Initialize RetrofitClient with the application context
+        // initialize RetrofitClient with the application context
         RetrofitClient.init(this)
 
-        // Traffic Cop: Determine where the user should start
-        // If they have a token, go to "feed", otherwise go to "login"
+        // determine where the user should start
+        // if they have a token, go to "feed", otherwise go to "login"
         val startDestination = if (RetrofitClient.isLoggedIn()) "feed" else "login"
 
         setContent {
             BinOrWinTheme {
-                // Create the Navigation Controller
+                // create the Navigation Controller
                 val navController = rememberNavController()
 
                 // Set up the routes
                 NavHost(navController = navController, startDestination = startDestination) {
 
-                    // --- LOGIN ROUTE ---
+                    // login route
                     composable("login") {
                         LoginScreen(
                             viewModel = authViewModel,
                             onNavigateToSignup = { navController.navigate("signup") },
                             onLoginSuccess = {
-                                // If login succeeds, go to feed and remove login from backstack (so back button closes app)
+                                // If login succeeds, go to feed and remove login from backstack
                                 navController.navigate("feed") {
                                     popUpTo("login") { inclusive = true }
                                 }
@@ -73,13 +71,13 @@ class MainActivity : ComponentActivity() {
                         )
                     }
 
-                    // --- SIGNUP ROUTE ---
+                    // signup route
                     composable("signup") {
                         SignupScreen(
                             viewModel = authViewModel,
                             onNavigateToLogin = { navController.navigate("login") },
                             onSignupSuccess = {
-                                // If signup succeeds (which also logs them in), go to feed
+                                // If signup succeeds, go to feed
                                 navController.navigate("feed") {
                                     popUpTo("signup") { inclusive = true }
                                 }
@@ -87,16 +85,15 @@ class MainActivity : ComponentActivity() {
                         )
                     }
 
-                    // --- FEED ROUTE (Your existing main app) ---
+                    // feed route
                     composable("feed") {
-                        // Call your existing MainScreen here
                         MainScreen(
                             viewModel = viewModel,
                             onLogout = {
-                                // delete token
+                                // delete token and username
                                 RetrofitClient.clearAuthToken()
                                 navController.navigate("login") {
-                                    popUpTo("feed") {inclusive = true}
+                                    popUpTo("feed") { inclusive = true }
                                 }
                             }
                         )
@@ -134,13 +131,8 @@ fun MainScreen(viewModel: MainViewModel, onLogout: () -> Unit) {
             )
         }
     ) { paddingValues ->
-        PullToRefreshBox(
-            isRefreshing = viewModel.isRefreshing,
-            onRefresh = { viewModel.refreshPosts() },
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(paddingValues)
-        ) {
+
+        Box(modifier = Modifier.padding(paddingValues)) {
             if (viewModel.posts.isEmpty()) {
                 Box(
                     modifier = Modifier
@@ -164,7 +156,7 @@ fun MainScreen(viewModel: MainViewModel, onLogout: () -> Unit) {
         }
     }
 
-    // Display the Bottom Sheet if the state is true
+    // display the Bottom Sheet if the state is true
     if (showBottomSheet && selectedPostId != null) {
         ModalBottomSheet(
             onDismissRequest = { showBottomSheet = false },
@@ -176,6 +168,13 @@ fun MainScreen(viewModel: MainViewModel, onLogout: () -> Unit) {
                 arguments = viewModel.currentArguments,
                 onSubmit = { actionType, content ->
                     viewModel.createArgument(selectedPostId!!, actionType, content)
+                },
+                // delete and edit functions to the bottom sheet
+                onDelete = { argId ->
+                    viewModel.deleteArgument(selectedPostId!!, argId)
+                },
+                onEdit = { argId, actionType, content ->
+                    viewModel.updateArgument(selectedPostId!!, argId, actionType, content)
                 }
             )
         }
@@ -204,7 +203,7 @@ fun PostCard(post: Post, onVote: (Int, String) -> Unit, onDiscussClick: () -> Un
         Column(modifier = Modifier.padding(16.dp)) {
             Text(text = post.title, style = MaterialTheme.typography.headlineSmall)
 
-            // NEW: Display the owner of the post
+            // the owner of the post
             val ownerName = post.owner?.username ?: "Unknown User"
             Text(
                 text = "Posted by: $ownerName",
@@ -259,11 +258,18 @@ fun PostCard(post: Post, onVote: (Int, String) -> Unit, onDiscussClick: () -> Un
 fun ArgumentBottomSheetContent(
     postId: Int,
     arguments: List<Argument>,
-    onSubmit: (String, String) -> Unit
+    onSubmit: (String, String) -> Unit,
+    onDelete: (Int) -> Unit, // ADDED THIS
+    onEdit: (Int, String, String) -> Unit // ADDED THIS
 ) {
     var contentText by remember { mutableStateOf("") }
-    // Default action type for the argument (user can toggle this before posting)
     var selectedActionType by remember { mutableStateOf("win") }
+
+    // State variables for our Dialogs!
+    var argumentToDelete by remember { mutableStateOf<Argument?>(null) }
+    var argumentToEdit by remember { mutableStateOf<Argument?>(null) }
+    var editContentText by remember { mutableStateOf("") }
+    var editActionType by remember { mutableStateOf("win") }
 
     Column(
         modifier = Modifier
@@ -276,7 +282,6 @@ fun ArgumentBottomSheetContent(
             modifier = Modifier.padding(bottom = 16.dp)
         )
 
-        // List of existing arguments
         LazyColumn(
             modifier = Modifier.weight(1f),
             verticalArrangement = Arrangement.spacedBy(8.dp)
@@ -296,32 +301,133 @@ fun ArgumentBottomSheetContent(
                         ),
                         modifier = Modifier.fillMaxWidth()
                     ) {
-                        Column(modifier = Modifier.padding(12.dp)) {
-                            val argOwner = arg.owner?.username ?: "Anonymous"
-                            Text(
-                                text = if (arg.actionType == "win") "WIN Argument" else "BIN Argument",
-                                style = MaterialTheme.typography.labelSmall,
-                                color = if (arg.actionType == "win")
-                                    MaterialTheme.colorScheme.onPrimaryContainer
-                                else
-                                    MaterialTheme.colorScheme.onErrorContainer
-                            )
-                            Spacer(modifier = Modifier.height(4.dp))
-                            Text(text = arg.content)
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(12.dp),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Column(modifier = Modifier.weight(1f)) {
+                                val argOwner = arg.owner?.username ?: "Anonymous"
+                                Text(
+                                    text = if (arg.actionType == "win") "WIN Argument by $argOwner" else "BIN Argument by $argOwner",
+                                    style = MaterialTheme.typography.labelSmall,
+                                    color = if (arg.actionType == "win")
+                                        MaterialTheme.colorScheme.onPrimaryContainer
+                                    else
+                                        MaterialTheme.colorScheme.onErrorContainer
+                                )
+                                Spacer(modifier = Modifier.height(4.dp))
+                                Text(text = arg.content)
+                            }
+
+                            // show icons (edit, delete) if it is my comment
+                            if (arg.owner?.username == RetrofitClient.getUserName()) {
+                                Row {
+                                    IconButton(
+                                        onClick = {
+                                            // edit dialog open
+                                            argumentToEdit = arg
+                                            editContentText = arg.content
+                                            editActionType = arg.actionType
+                                        },
+                                        modifier = Modifier.size(32.dp)
+                                    ) {
+                                        Icon(
+                                            Icons.Default.Edit,
+                                            contentDescription = "Edit",
+                                            modifier = Modifier.size(20.dp),
+                                            tint = MaterialTheme.colorScheme.onSurfaceVariant
+                                        )
+                                    }
+                                    IconButton(
+                                        onClick = {
+                                            // delete dialog open
+                                            argumentToDelete = arg
+                                        },
+                                        modifier = Modifier.size(32.dp)
+                                    ) {
+                                        Icon(
+                                            Icons.Default.Delete,
+                                            contentDescription = "Delete",
+                                            modifier = Modifier.size(20.dp),
+                                            tint = MaterialTheme.colorScheme.error
+                                        )
+                                    }
+                                }
+                            }
                         }
                     }
                 }
             }
         }
 
-        // Input area for new argument
+        // delete confirmation
+        if (argumentToDelete != null) {
+            AlertDialog(
+                onDismissRequest = { argumentToDelete = null },
+                title = { Text("Delete Argument") },
+                text = { Text("Are you sure you want to delete this argument? This action cannot be undone.") },
+                confirmButton = {
+                    TextButton(onClick = {
+                        onDelete(argumentToDelete!!.id)
+                        argumentToDelete = null
+                    }) {
+                        Text("Delete", color = MaterialTheme.colorScheme.error)
+                    }
+                },
+                dismissButton = {
+                    TextButton(onClick = { argumentToDelete = null }) { Text("Cancel") }
+                }
+            )
+        }
+
+        // edit
+        if (argumentToEdit != null) {
+            AlertDialog(
+                onDismissRequest = { argumentToEdit = null },
+                title = { Text("Edit Argument") },
+                text = {
+                    Column {
+                        TextButton(
+                            onClick = { editActionType = if (editActionType == "win") "bin" else "win" },
+                            colors = ButtonDefaults.textButtonColors(
+                                contentColor = if (editActionType == "win") MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.error
+                            )
+                        ) {
+                            Text(editActionType.uppercase())
+                        }
+                        OutlinedTextField(
+                            value = editContentText,
+                            onValueChange = { editContentText = it },
+                            modifier = Modifier.fillMaxWidth()
+                        )
+                    }
+                },
+                confirmButton = {
+                    TextButton(onClick = {
+                        if (editContentText.isNotBlank()) {
+                            onEdit(argumentToEdit!!.id, editActionType, editContentText)
+                            argumentToEdit = null
+                        }
+                    }) {
+                        Text("Save")
+                    }
+                },
+                dismissButton = {
+                    TextButton(onClick = { argumentToEdit = null }) { Text("Cancel") }
+                }
+            )
+        }
+
+        // input area for new argument
         Row(
             modifier = Modifier
                 .fillMaxWidth()
                 .padding(top = 8.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            // A simple toggle to choose whether the argument supports BIN or WIN
             TextButton(
                 onClick = { selectedActionType = if (selectedActionType == "win") "bin" else "win" },
                 colors = ButtonDefaults.textButtonColors(
@@ -343,7 +449,7 @@ fun ArgumentBottomSheetContent(
                 onClick = {
                     if (contentText.isNotBlank()) {
                         onSubmit(selectedActionType, contentText)
-                        contentText = "" // Clear the input field after submitting
+                        contentText = ""
                     }
                 }
             ) {
@@ -351,6 +457,6 @@ fun ArgumentBottomSheetContent(
             }
         }
 
-        Spacer(modifier = Modifier.height(16.dp)) // Padding for bottom system navigation bar
+        Spacer(modifier = Modifier.height(16.dp))
     }
 }

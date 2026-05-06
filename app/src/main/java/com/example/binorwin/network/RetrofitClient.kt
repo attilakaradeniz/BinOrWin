@@ -54,9 +54,14 @@ object RetrofitClient {
         tokenManager?.saveToken(token)
     }
 
+    fun saveUserName(username: String) {tokenManager?.saveUsername(username)}
+
+    fun getUserName(): String? { return tokenManager?.getUsername()}
+
     // Clear the token when the user logs out
     fun clearAuthToken() {
-        tokenManager?.clearToken()
+//        tokenManager?.clearToken()
+        tokenManager?.clearAll()
     }
 
     // Check if the user is currently logged in

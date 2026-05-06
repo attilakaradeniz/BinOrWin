@@ -32,6 +32,9 @@ class AuthViewModel : ViewModel() {
                 val response = RetrofitClient.apiService.login(username, pass)
                 // Save the token to our safe (TokenManager)
                 RetrofitClient.saveAuthToken(response.access_token)
+
+                //save the username
+                RetrofitClient.saveUserName(username)
                 // Tell the UI it was successful
                 _authState.value = AuthState.Success
             } catch (e: Exception) {
