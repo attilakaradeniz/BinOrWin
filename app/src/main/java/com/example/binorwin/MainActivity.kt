@@ -32,6 +32,7 @@ import com.example.binorwin.ui.components.SignupScreen
 //import com.example.binorwin.ui.SignupScreen
 import com.example.binorwin.ui.theme.BinOrWinTheme
 import com.example.binorwin.viewmodel.AuthViewModel
+import androidx.compose.material.icons.filled.ExitToApp
 
 class MainActivity : ComponentActivity() {
 
@@ -89,7 +90,16 @@ class MainActivity : ComponentActivity() {
                     // --- FEED ROUTE (Your existing main app) ---
                     composable("feed") {
                         // Call your existing MainScreen here
-                        MainScreen(viewModel = viewModel)
+                        MainScreen(
+                            viewModel = viewModel,
+                            onLogout = {
+                                // delete token
+                                RetrofitClient.clearAuthToken()
+                                navController.navigate("login") {
+                                    popUpTo("feed") {inclusive = true}
+                                }
+                            }
+                        )
                     }
                 }
             }
@@ -99,7 +109,7 @@ class MainActivity : ComponentActivity() {
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun MainScreen(viewModel: MainViewModel) {
+fun MainScreen(viewModel: MainViewModel, onLogout: () -> Unit) {
     // State to control Bottom Sheet visibility and which post is currently selected
     var showBottomSheet by remember { mutableStateOf(false) }
     var selectedPostId by remember { mutableStateOf<Int?>(null) }
@@ -110,11 +120,17 @@ fun MainScreen(viewModel: MainViewModel) {
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("Bin Or Win Feed") },
+                title = { Text("Bin Or Win") },
                 colors = TopAppBarDefaults.topAppBarColors(
                     containerColor = MaterialTheme.colorScheme.primaryContainer,
                     titleContentColor = MaterialTheme.colorScheme.onPrimaryContainer
-                )
+                ),
+                actions = {
+                    // logout button (top right)
+                    IconButton(onClick = onLogout) {
+                        Icon(Icons.Default.ExitToApp, contentDescription = "Logout")
+                    }
+                }
             )
         }
     ) { paddingValues ->

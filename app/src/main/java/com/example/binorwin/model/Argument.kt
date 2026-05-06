@@ -7,7 +7,9 @@ data class Argument(
     @SerializedName("post_id") val postId: Int,
     @SerializedName("action_type") val actionType: String,
     @SerializedName("created_at") val createdAt: String? = null,
-    val content: String
+    val content: String,
+    // user who wrote this argument.
+    val owner: UserResponse? = null
 )
 
 // Data class used when send a new comment to API
