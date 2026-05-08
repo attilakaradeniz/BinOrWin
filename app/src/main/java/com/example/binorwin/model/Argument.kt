@@ -9,7 +9,10 @@ data class Argument(
     @SerializedName("created_at") val createdAt: String? = null,
     val content: String,
     // user who wrote this argument.
-    val owner: UserResponse? = null
+    val owner: UserResponse? = null,
+    
+    // counter for likes
+    @SerializedName("likes_count") val likesCount: Int = 0
 )
 
 // Data class used when send a new comment to API

@@ -8,7 +8,10 @@ data class Post(
     @SerializedName("bin_votes") val binVotes: Int,
     @SerializedName("win_votes") val winVotes: Int,
     @SerializedName("created_at") val createdAt: String? = null,
-    val owner: UserResponse? = null
+    val owner: UserResponse? = null,
+
+    //counter for arguments
+    @SerializedName("arguments_count") val argumentCount: Int = 0
 )
 
 // Data class for post

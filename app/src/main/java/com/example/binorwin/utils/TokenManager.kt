@@ -14,12 +14,12 @@ class TokenManager(context: Context) {
         return prefs.getString("jwt_token", null)
     }
 
-    // YENİ: Kullanıcı adını kaydetmek için
+    // save username
     fun saveUsername(username: String) {
         prefs.edit().putString("username", username).apply()
     }
 
-    // YENİ: Kullanıcı adını geri okumak için
+    // to get username
     fun getUsername(): String? {
         return prefs.getString("username", null)
     }

@@ -18,7 +18,7 @@ sealed class AuthState {
 
 class AuthViewModel : ViewModel() {
 
-    // Internal state that can be updated
+    // internal state that can be updated
     private val _authState = MutableStateFlow<AuthState>(AuthState.Idle)
     // Public state that the UI observes
     val authState: StateFlow<AuthState> = _authState

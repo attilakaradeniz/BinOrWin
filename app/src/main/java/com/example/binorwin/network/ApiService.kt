@@ -37,6 +37,8 @@ interface ApiService {
         @Query("vote_type") voteType: String
     ): Post
 
+
+
     // Fetch all arguments (comments) for a specific post
     @GET("posts/{post_id}/arguments")
     suspend fun getArgumentsForPost(@Path("post_id") postId: Int): List<Argument>
@@ -46,6 +48,11 @@ interface ApiService {
     suspend fun createArgumentForPost(
         @Path("post_id") postId: Int,
         @Body argument: ArgumentCreate
+    ): Argument
+
+    @POST("arguments/{argument_id}/like")
+    suspend fun likeArgument(
+        @Path("argument_id") argumentId: Int
     ): Argument
 
     // Send user data as a JSON body to create a new account
@@ -73,3 +80,4 @@ interface ApiService {
         @Path("argument_id") argumentId: Int
     )
 }
+

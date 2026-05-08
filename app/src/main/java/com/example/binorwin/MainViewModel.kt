@@ -98,13 +98,26 @@ class MainViewModel : ViewModel() {
         }
     }
 
-    // Function to update an argument and refresh the list
+    // fnction to update an argument and refresh the list
     fun updateArgument(postId: Int, argumentId: Int, actionType: String, content: String) {
         viewModelScope.launch {
             try {
                 val updatedArg = com.example.binorwin.model.ArgumentCreate(actionType, content)
                 com.example.binorwin.network.RetrofitClient.apiService.updateArgument(argumentId, updatedArg)
                 // Refresh the arguments list after editing
+                fetchArguments(postId)
+            } catch (e: Exception) {
+                // Handle error
+            }
+        }
+    }
+
+    // function to like/unlike an argument
+    fun likeArgument(postId: Int, argumentId: Int) {
+        viewModelScope.launch {
+            try {
+                com.example.binorwin.network.RetrofitClient.apiService.likeArgument(argumentId)
+                // Refresh the arguments list so the heart counter updates immediately!
                 fetchArguments(postId)
             } catch (e: Exception) {
                 // Handle error

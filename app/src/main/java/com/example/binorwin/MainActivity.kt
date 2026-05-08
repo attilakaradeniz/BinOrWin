@@ -13,11 +13,13 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.ExitToApp
+import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.filled.Send
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.unit.dp
 import androidx.navigation.compose.NavHost
@@ -36,7 +38,7 @@ class MainActivity : ComponentActivity() {
 
     // ViewModel for the Feed
     private val viewModel: MainViewModel by viewModels()
-    // AuthViewModel that will be shared across auth screens
+    // AuthViewModel - shared across auth screens
     private val authViewModel: AuthViewModel by viewModels()
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -175,6 +177,9 @@ fun MainScreen(viewModel: MainViewModel, onLogout: () -> Unit) {
                 },
                 onEdit = { argId, actionType, content ->
                     viewModel.updateArgument(selectedPostId!!, argId, actionType, content)
+                },
+                onLike = { argId ->
+                    viewModel.likeArgument(selectedPostId!!, argId)
                 }
             )
         }
@@ -248,7 +253,7 @@ fun PostCard(post: Post, onVote: (Int, String) -> Unit, onDiscussClick: () -> Un
                 onClick = onDiscussClick,
                 modifier = Modifier.align(Alignment.CenterHorizontally).padding(top = 8.dp)
             ) {
-                Text("View Arguments & Discuss")
+                Text("View Arguments & Discuss (${post.argumentCount})")
             }
         }
     }
@@ -260,7 +265,8 @@ fun ArgumentBottomSheetContent(
     arguments: List<Argument>,
     onSubmit: (String, String) -> Unit,
     onDelete: (Int) -> Unit, // ADDED THIS
-    onEdit: (Int, String, String) -> Unit // ADDED THIS
+    onEdit: (Int, String, String) -> Unit, // ADDED THIS
+    onLike: (Int) -> Unit
 ) {
     var contentText by remember { mutableStateOf("") }
     var selectedActionType by remember { mutableStateOf("win") }
@@ -320,9 +326,28 @@ fun ArgumentBottomSheetContent(
                                 )
                                 Spacer(modifier = Modifier.height(4.dp))
                                 Text(text = arg.content)
+
+                                Spacer(modifier = Modifier.height(8.dp))
+                                Row(verticalAlignment = Alignment.CenterVertically) {
+                                    IconButton(
+                                        onClick = { onLike(arg.id) },
+                                        modifier = Modifier.size(24.dp)
+                                    ) {
+                                        Icon(
+                                            Icons.Default.Favorite,
+                                            contentDescription = "Like",
+                                            tint = Color.Red
+                                        )
+                                    }
+                                    Spacer(modifier = Modifier.width(4.dp))
+                                    Text(
+                                        text = "${arg.likesCount}",
+                                        style = MaterialTheme.typography.bodySmall
+                                    )
+                                }
                             }
 
-                            // show icons (edit, delete) if it is my comment
+                            // show icons (edit, delete) if it is current user content
                             if (arg.owner?.username == RetrofitClient.getUserName()) {
                                 Row {
                                     IconButton(
