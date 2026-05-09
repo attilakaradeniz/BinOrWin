@@ -145,27 +145,38 @@ class MainViewModel : ViewModel() {
     }
 
     // file gen from URI
-    fun uploadImageAndCreatePost(context: Context, title: String, imageUri: Uri, onSuccess: () -> Unit) {
+    fun uploadImageAndCreatePost(context: android.content.Context, title: String, imageUri: android.net.Uri, onResult: (Boolean) -> Unit) {
         viewModelScope.launch {
             try {
-                // temp file obj from URI
                 val file = getFileFromUri(context, imageUri)
                 if (file != null) {
-                    // prepare multipart body for retrofit
                     val requestFile = file.asRequestBody("image/*".toMediaTypeOrNull())
                     val body = MultipartBody.Part.createFormData("file", file.name, requestFile)
 
-                    // send to API get the URL
+                    // 1. Api'ye gönder ve URL'yi al
                     val response = com.example.binorwin.network.RetrofitClient.apiService.uploadImage(body)
 
-                    // create post with URL
-                    createPost(title, response.image_url)
+                    // 2. Gelen URL ile Post'u oluştur (Kendi yazımına göre PostCreate modelini ayarla)
+                    val newPost = com.example.binorwin.model.PostCreate(title = title, imageUrl = response.image_url)
+                    com.example.binorwin.network.RetrofitClient.apiService.createPost(newPost)
 
-                    // info to UI
-                    onSuccess()
+                    // 3. Başarılı olduysa listeyi yenile. (Senin ViewModel'daki listeyi çekme fonksiyonunun adı neyse onu yaz, örn: fetchPosts() veya getPosts())
+                    // fetchPosts() // (Bunun başındaki // işaretini kaldır ve kendi fonksiyon adını yaz)
+                    refreshPosts()
+                    // 4. UI'ı bilgilendir (Başarılı)
+                    onResult(true)
+                } else {
+                    onResult(false)
                 }
             } catch (e: Exception) {
-                // TO DO:
+                // İŞTE YAKALADIK! Eğer hata olursa burası çalışacak.
+                android.util.Log.e("UploadError", "Yükleme Hatası: ${e.message}", e)
+
+                // Kullanıcının (yani senin) ekranına hatayı basıyoruz:
+                android.widget.Toast.makeText(context, "Hata: ${e.localizedMessage}", android.widget.Toast.LENGTH_LONG).show()
+
+                // Tekerleği durdur!
+                onResult(false)
             }
         }
     }

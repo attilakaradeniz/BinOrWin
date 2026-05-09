@@ -10,10 +10,13 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.AddCircle
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.ExitToApp
 import androidx.compose.material.icons.filled.Favorite
+import androidx.compose.material.icons.filled.Home
+import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.Send
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -115,7 +118,7 @@ fun MainScreen(viewModel: MainViewModel, onLogout: () -> Unit) {
 
     // Controls the animation and state of the bottom sheet
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = false)
-
+    var currentTab by remember { mutableStateOf("home") }
     Scaffold(
         topBar = {
             TopAppBar(
@@ -123,47 +126,76 @@ fun MainScreen(viewModel: MainViewModel, onLogout: () -> Unit) {
                 colors = TopAppBarDefaults.topAppBarColors(
                     containerColor = MaterialTheme.colorScheme.primaryContainer,
                     titleContentColor = MaterialTheme.colorScheme.onPrimaryContainer
-                ),
-                actions = {
-                    // logout button (top right)
-                    IconButton(onClick = onLogout) {
-                        Icon(Icons.Default.ExitToApp, contentDescription = "Logout")
-                    }
-                }
+                )
             )
-        }
-    ) { paddingValues ->
+        },
 
-        Box(modifier = Modifier.padding(paddingValues)) {
-            if (viewModel.posts.isEmpty()) {
-                Box(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .verticalScroll(rememberScrollState()),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Text("No posts yet. Pull to refresh or check server connection.")
-                }
-            } else {
-                PostList(
-                    posts = viewModel.posts,
-                    onVote = { postId, type -> viewModel.vote(postId, type) },
-                    onDiscussClick = { postId ->
-                        selectedPostId = postId
-                        viewModel.fetchArguments(postId)
-                        showBottomSheet = true
-                    }
+        bottomBar = {
+            NavigationBar {
+                NavigationBarItem(
+                    icon = { Icon(Icons.Default.Home, contentDescription = "Home") },
+                    label = { Text("Home") },
+                    selected = currentTab == "home",
+                    onClick = { currentTab = "home" }
+                )
+                NavigationBarItem(
+                    icon = { Icon(Icons.Default.AddCircle, contentDescription = "Add Post") },
+                    label = { Text("Add") },
+                    selected = currentTab == "add",
+                    onClick = { currentTab = "add" }
+                )
+                NavigationBarItem(
+                    icon = { Icon(Icons.Default.Person, contentDescription = "Profile") },
+                    label = { Text("Profile") },
+                    selected = currentTab == "profile",
+                    onClick = { currentTab = "profile" }
                 )
             }
         }
-    }
 
-    // display the Bottom Sheet if the state is true
+    ) { paddingValues ->
+
+        Box(modifier = Modifier.padding(paddingValues)) {
+            // SHOW CONTENT BASED ON SELECTED TAB
+            when (currentTab) {
+                "home" -> {
+                    // YAKINDAN TANIDIĞIMIZ FEED EKRANI
+                    if (viewModel.posts.isEmpty()) {
+                        Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                            Text("No posts yet.")
+                        }
+                    } else {
+                        PostList(
+                            posts = viewModel.posts,
+                            onVote = { postId, type -> viewModel.vote(postId, type) },
+                            onDiscussClick = { postId ->
+                                selectedPostId = postId
+                                viewModel.fetchArguments(postId)
+                                showBottomSheet = true
+                            }
+                        )
+                    }
+                }
+                "add" -> {
+                    // YENİ: POST EKLEME EKRANI
+                    AddPostScreen(viewModel) {
+                        // Başarılı olunca Home'a dön
+                        currentTab = "home"
+                    }
+                }
+                "profile" -> {
+                    // YENİ: PROFİL EKRANI
+                    ProfileScreen(onLogout)
+                }
+            }
+        }
+    }
+// EKSİK OLAN VE GERİ GETİRDİĞİMİZ KISIM: BOTTOM SHEET
     if (showBottomSheet && selectedPostId != null) {
         ModalBottomSheet(
             onDismissRequest = { showBottomSheet = false },
             sheetState = sheetState,
-            modifier = Modifier.fillMaxHeight(0.85f) // Take up 85% of the screen height
+            modifier = Modifier.fillMaxHeight(0.85f)
         ) {
             ArgumentBottomSheetContent(
                 postId = selectedPostId!!,
@@ -171,7 +203,6 @@ fun MainScreen(viewModel: MainViewModel, onLogout: () -> Unit) {
                 onSubmit = { actionType, content ->
                     viewModel.createArgument(selectedPostId!!, actionType, content)
                 },
-                // delete and edit functions to the bottom sheet
                 onDelete = { argId ->
                     viewModel.deleteArgument(selectedPostId!!, argId)
                 },
@@ -184,7 +215,10 @@ fun MainScreen(viewModel: MainViewModel, onLogout: () -> Unit) {
             )
         }
     }
-}
+
+    }
+
+
 
 @Composable
 fun PostList(posts: List<Post>, onVote: (Int, String) -> Unit, onDiscussClick: (Int) -> Unit) {
@@ -483,5 +517,108 @@ fun ArgumentBottomSheetContent(
         }
 
         Spacer(modifier = Modifier.height(16.dp))
+    }
+}
+
+@Composable
+fun ProfileScreen(onLogout: () -> Unit) {
+    Column(
+        modifier = Modifier.fillMaxSize().padding(16.dp),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.Center
+    ) {
+        Icon(Icons.Default.Person, contentDescription = "Profile Pic", modifier = Modifier.size(100.dp), tint = MaterialTheme.colorScheme.primary)
+        Spacer(modifier = Modifier.height(16.dp))
+        Text(text = "@${RetrofitClient.getUserName()}", style = MaterialTheme.typography.headlineMedium)
+        Spacer(modifier = Modifier.height(32.dp))
+        Button(onClick = onLogout, colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error)) {
+            Icon(Icons.Default.ExitToApp, contentDescription = "Logout")
+            Spacer(modifier = Modifier.width(8.dp))
+            Text("Logout")
+        }
+    }
+}
+
+@Composable
+fun AddPostScreen(viewModel: MainViewModel, onSuccess: () -> Unit) {
+    val context = androidx.compose.ui.platform.LocalContext.current
+    var title by remember { mutableStateOf("") }
+    var selectedImageUri by remember { mutableStateOf<android.net.Uri?>(null) }
+    var isUploading by remember { mutableStateOf(false) }
+
+    // Kamera için geçici URI oluşturucu
+    val tempUri = remember {
+        val tempFile = java.io.File.createTempFile("camera_temp", ".jpg", context.cacheDir).apply { createNewFile() }
+        androidx.core.content.FileProvider.getUriForFile(context, "${context.packageName}.fileprovider", tempFile)
+    }
+
+    // Kamera Başlatıcı
+    val cameraLauncher = androidx.activity.compose.rememberLauncherForActivityResult(androidx.activity.result.contract.ActivityResultContracts.TakePicture()) { success ->
+        if (success) selectedImageUri = tempUri
+    }
+
+    // Galeri Başlatıcı
+    val galleryLauncher = androidx.activity.compose.rememberLauncherForActivityResult(androidx.activity.result.contract.ActivityResultContracts.PickVisualMedia()) { uri ->
+        if (uri != null) selectedImageUri = uri
+    }
+
+    Column(modifier = Modifier.fillMaxSize().padding(16.dp), horizontalAlignment = Alignment.CenterHorizontally) {
+        Text("Create New Post", style = MaterialTheme.typography.headlineMedium)
+        Spacer(modifier = Modifier.height(16.dp))
+
+        OutlinedTextField(
+            value = title,
+            onValueChange = { title = it },
+            label = { Text("Post Title / Question") },
+            modifier = Modifier.fillMaxWidth()
+        )
+        Spacer(modifier = Modifier.height(16.dp))
+
+        // Image Preview
+        if (selectedImageUri != null) {
+            AsyncImage(
+                model = selectedImageUri,
+                contentDescription = "Selected Image",
+                modifier = Modifier.fillMaxWidth().height(250.dp),
+                contentScale = ContentScale.Crop
+            )
+        } else {
+            Box(modifier = Modifier.fillMaxWidth().height(200.dp).padding(16.dp), contentAlignment = Alignment.Center) {
+                Text("No image selected", color = MaterialTheme.colorScheme.onSurfaceVariant)
+            }
+        }
+
+        Spacer(modifier = Modifier.height(16.dp))
+
+        Row(horizontalArrangement = Arrangement.SpaceEvenly, modifier = Modifier.fillMaxWidth()) {
+            Button(onClick = { cameraLauncher.launch(tempUri) }) {
+                Text("Camera")
+            }
+            Button(onClick = { galleryLauncher.launch(androidx.activity.result.PickVisualMediaRequest(androidx.activity.result.contract.ActivityResultContracts.PickVisualMedia.ImageOnly)) }) {
+                Text("Gallery")
+            }
+        }
+
+        Spacer(modifier = Modifier.weight(1f))
+
+        Button(
+            onClick = {
+                if (title.isNotBlank() && selectedImageUri != null) {
+                    isUploading = true
+                    viewModel.uploadImageAndCreatePost(context, title, selectedImageUri!!) { success ->
+                        isUploading = false
+
+                        if(success) {
+                        onSuccess()
+                        }
+                    }
+                }
+            },
+            modifier = Modifier.fillMaxWidth().height(50.dp),
+            enabled = title.isNotBlank() && selectedImageUri != null && !isUploading
+        ) {
+            if (isUploading) CircularProgressIndicator(color = Color.White, modifier = Modifier.size(24.dp))
+            else Text("UPLOAD POST")
+        }
     }
 }
