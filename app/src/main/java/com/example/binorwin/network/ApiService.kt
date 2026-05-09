@@ -89,5 +89,11 @@ interface ApiService {
     suspend fun uploadImage(
         @Part file: MultipartBody.Part
     ): UploadRespose
+
+    // Delete a post
+    @DELETE("posts/{post_id}")
+    suspend fun deletePost(
+        @Path("post_id") postId: Int
+    ): retrofit2.Response<Unit> // instead of Any
 }
 

@@ -153,29 +153,28 @@ class MainViewModel : ViewModel() {
                     val requestFile = file.asRequestBody("image/*".toMediaTypeOrNull())
                     val body = MultipartBody.Part.createFormData("file", file.name, requestFile)
 
-                    // 1. Api'ye gönder ve URL'yi al
+                    // send to API
                     val response = com.example.binorwin.network.RetrofitClient.apiService.uploadImage(body)
 
-                    // 2. Gelen URL ile Post'u oluştur (Kendi yazımına göre PostCreate modelini ayarla)
+                    // create post
                     val newPost = com.example.binorwin.model.PostCreate(title = title, imageUrl = response.image_url)
                     com.example.binorwin.network.RetrofitClient.apiService.createPost(newPost)
 
-                    // 3. Başarılı olduysa listeyi yenile. (Senin ViewModel'daki listeyi çekme fonksiyonunun adı neyse onu yaz, örn: fetchPosts() veya getPosts())
-                    // fetchPosts() // (Bunun başındaki // işaretini kaldır ve kendi fonksiyon adını yaz)
+                    // if succeess refresh list
                     refreshPosts()
-                    // 4. UI'ı bilgilendir (Başarılı)
+                    // succeess
                     onResult(true)
                 } else {
                     onResult(false)
                 }
             } catch (e: Exception) {
-                // İŞTE YAKALADIK! Eğer hata olursa burası çalışacak.
+                // android std log (Logcat)
                 android.util.Log.e("UploadError", "Yükleme Hatası: ${e.message}", e)
 
-                // Kullanıcının (yani senin) ekranına hatayı basıyoruz:
+                // info to UI screen
                 android.widget.Toast.makeText(context, "Hata: ${e.localizedMessage}", android.widget.Toast.LENGTH_LONG).show()
 
-                // Tekerleği durdur!
+                // stop progress wheel!
                 onResult(false)
             }
         }
@@ -190,5 +189,24 @@ class MainViewModel : ViewModel() {
         outputStream.close()
         return tempFile
     }
+    // Function to delete a post
+    fun deletePost(postId: Int) {
+        viewModelScope.launch {
+            try {
+                val response = com.example.binorwin.network.RetrofitClient.apiService.deletePost(postId)
+                if (response.isSuccessful) {
+                    // if delete success refresh posts
+                    refreshPosts() //
+                } else {
+                    // if ERROR (eg: 403, 404, 422) then log
+                    val errorDetail = response.errorBody()?.string()
+                    android.util.Log.e("DeleteError", "FastAPI msg: $errorDetail")
+                }
+            } catch (e: Exception) {
+                android.util.Log.e("DeleteError", "couldnt reach the server: ${e.message}")
+            }
+        }
+    }
+
 
 }

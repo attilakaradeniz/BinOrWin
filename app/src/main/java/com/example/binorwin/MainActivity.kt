@@ -159,7 +159,7 @@ fun MainScreen(viewModel: MainViewModel, onLogout: () -> Unit) {
             // SHOW CONTENT BASED ON SELECTED TAB
             when (currentTab) {
                 "home" -> {
-                    // YAKINDAN TANIDIĞIMIZ FEED EKRANI
+                    // feed
                     if (viewModel.posts.isEmpty()) {
                         Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                             Text("No posts yet.")
@@ -172,25 +172,27 @@ fun MainScreen(viewModel: MainViewModel, onLogout: () -> Unit) {
                                 selectedPostId = postId
                                 viewModel.fetchArguments(postId)
                                 showBottomSheet = true
+                            }, onDeletePost = { postId -> viewModel.deletePost(postId)
+                                  
                             }
                         )
                     }
                 }
                 "add" -> {
-                    // YENİ: POST EKLEME EKRANI
+                    // add post screen
                     AddPostScreen(viewModel) {
-                        // Başarılı olunca Home'a dön
+                        // if syccess return to home
                         currentTab = "home"
                     }
                 }
                 "profile" -> {
-                    // YENİ: PROFİL EKRANI
+                    // user profile screen
                     ProfileScreen(onLogout)
                 }
             }
         }
     }
-// EKSİK OLAN VE GERİ GETİRDİĞİMİZ KISIM: BOTTOM SHEET
+// bottom shheet
     if (showBottomSheet && selectedPostId != null) {
         ModalBottomSheet(
             onDismissRequest = { showBottomSheet = false },
@@ -221,43 +223,68 @@ fun MainScreen(viewModel: MainViewModel, onLogout: () -> Unit) {
 
 
 @Composable
-fun PostList(posts: List<Post>, onVote: (Int, String) -> Unit, onDiscussClick: (Int) -> Unit) {
+fun PostList(posts: List<Post>, onVote: (Int, String) -> Unit, onDiscussClick: (Int) -> Unit, onDeletePost: (Int) -> Unit) {
     LazyColumn(
         modifier = Modifier.fillMaxSize(),
         contentPadding = PaddingValues(16.dp),
         verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
         items(posts) { post ->
-            PostCard(post = post, onVote = onVote, onDiscussClick = { onDiscussClick(post.id) })
+            PostCard(post = post, onVote = onVote, onDiscussClick = { onDiscussClick(post.id) }, onDeletePost = { onDeletePost(post.id) })
         }
     }
 }
 
 @Composable
-fun PostCard(post: Post, onVote: (Int, String) -> Unit, onDiscussClick: () -> Unit) {
+// postcard
+fun PostCard(post: Post, onVote: (Int, String) -> Unit, onDiscussClick: () -> Unit, onDeletePost: () -> Unit) {
+    // State to control the delete confirmation dialog
+    var showDeleteConfirmDialog by remember { mutableStateOf(false) }
+
     Card(
         modifier = Modifier.fillMaxWidth(),
         elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
     ) {
         Column(modifier = Modifier.padding(16.dp)) {
-            Text(text = post.title, style = MaterialTheme.typography.headlineSmall)
 
-            // the owner of the post
-            val ownerName = post.owner?.username ?: "Unknown User"
-            Text(
-                text = "Posted by: $ownerName",
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
-            )
+            // Header Row: Title + Optional Delete Button
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.Top
+            ) {
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(text = post.title, style = MaterialTheme.typography.headlineSmall)
+
+                    val ownerName = post.owner?.username ?: "Unknown User"
+                    Text(
+                        text = "Posted by: $ownerName",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+
+                // Show DELETE icon ONLY if the current logged-in user owns this post
+                if (post.owner?.username == RetrofitClient.getUserName()) {
+                    IconButton(
+                        onClick = { showDeleteConfirmDialog = true },
+                        modifier = Modifier.size(32.dp)
+                    ) {
+                        Icon(
+                            Icons.Default.Delete,
+                            contentDescription = "Delete Post",
+                            tint = MaterialTheme.colorScheme.error
+                        )
+                    }
+                }
+            }
 
             Spacer(modifier = Modifier.height(8.dp))
 
             AsyncImage(
                 model = post.imageUrl,
                 contentDescription = "Post Image",
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(250.dp),
+                modifier = Modifier.fillMaxWidth().height(250.dp),
                 contentScale = ContentScale.Crop
             )
 
@@ -282,7 +309,6 @@ fun PostCard(post: Post, onVote: (Int, String) -> Unit, onDiscussClick: () -> Un
                 }
             }
 
-            // Discuss Button to open the bottom sheet
             TextButton(
                 onClick = onDiscussClick,
                 modifier = Modifier.align(Alignment.CenterHorizontally).padding(top = 8.dp)
@@ -290,6 +316,28 @@ fun PostCard(post: Post, onVote: (Int, String) -> Unit, onDiscussClick: () -> Un
                 Text("View Arguments & Discuss (${post.argumentCount})")
             }
         }
+    }
+
+    // delete confiramtion dialog
+    if (showDeleteConfirmDialog) {
+        AlertDialog(
+            onDismissRequest = { showDeleteConfirmDialog = false },
+            title = { Text("Delete Post") },
+            text = { Text("Are you sure you want to delete this post? All votes and arguments will be lost forever.") },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        showDeleteConfirmDialog = false
+                        onDeletePost() // Trigger the deletion
+                    }
+                ) {
+                    Text("Delete", color = MaterialTheme.colorScheme.error)
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showDeleteConfirmDialog = false }) { Text("Cancel") }
+            }
+        )
     }
 }
 
@@ -546,18 +594,18 @@ fun AddPostScreen(viewModel: MainViewModel, onSuccess: () -> Unit) {
     var selectedImageUri by remember { mutableStateOf<android.net.Uri?>(null) }
     var isUploading by remember { mutableStateOf(false) }
 
-    // Kamera için geçici URI oluşturucu
+    // creates temp URI for camera
     val tempUri = remember {
         val tempFile = java.io.File.createTempFile("camera_temp", ".jpg", context.cacheDir).apply { createNewFile() }
         androidx.core.content.FileProvider.getUriForFile(context, "${context.packageName}.fileprovider", tempFile)
     }
 
-    // Kamera Başlatıcı
+    // camera launcher
     val cameraLauncher = androidx.activity.compose.rememberLauncherForActivityResult(androidx.activity.result.contract.ActivityResultContracts.TakePicture()) { success ->
         if (success) selectedImageUri = tempUri
     }
 
-    // Galeri Başlatıcı
+    // gallery louncher
     val galleryLauncher = androidx.activity.compose.rememberLauncherForActivityResult(androidx.activity.result.contract.ActivityResultContracts.PickVisualMedia()) { uri ->
         if (uri != null) selectedImageUri = uri
     }
