@@ -11,6 +11,13 @@ import com.example.binorwin.model.ArgumentCreate
 import com.example.binorwin.model.Post
 import com.example.binorwin.network.RetrofitClient
 import kotlinx.coroutines.launch
+import android.content.Context
+import android.net.Uri
+import okhttp3.MediaType.Companion.toMediaTypeOrNull
+import okhttp3.MultipartBody
+import okhttp3.RequestBody.Companion.asRequestBody
+import java.io.File
+import java.io.FileOutputStream
 
 class MainViewModel : ViewModel() {
 
@@ -123,6 +130,54 @@ class MainViewModel : ViewModel() {
                 // Handle error
             }
         }
+    }
+
+    fun createPost(title: String, imageUrl: String) {
+        viewModelScope.launch {
+            try {
+                val newPost = com.example.binorwin.model.PostCreate(title = title, imageUrl = imageUrl)
+                com.example.binorwin.network.RetrofitClient.apiService.createPost(newPost)
+                refreshPosts() // to show the latest
+            } catch (e: Exception) {
+                // TO DO:
+            }
+        }
+    }
+
+    // file gen from URI
+    fun uploadImageAndCreatePost(context: Context, title: String, imageUri: Uri, onSuccess: () -> Unit) {
+        viewModelScope.launch {
+            try {
+                // temp file obj from URI
+                val file = getFileFromUri(context, imageUri)
+                if (file != null) {
+                    // prepare multipart body for retrofit
+                    val requestFile = file.asRequestBody("image/*".toMediaTypeOrNull())
+                    val body = MultipartBody.Part.createFormData("file", file.name, requestFile)
+
+                    // send to API get the URL
+                    val response = com.example.binorwin.network.RetrofitClient.apiService.uploadImage(body)
+
+                    // create post with URL
+                    createPost(title, response.image_url)
+
+                    // info to UI
+                    onSuccess()
+                }
+            } catch (e: Exception) {
+                // TO DO:
+            }
+        }
+    }
+
+    private fun getFileFromUri(context: Context, uri: Uri): File? {
+        val inputStream = context.contentResolver.openInputStream(uri) ?: return null
+        val tempFile = File(context.cacheDir, "upload_temp_${System.currentTimeMillis()}.jpg")
+        val outputStream = FileOutputStream(tempFile)
+        inputStream.copyTo(outputStream)
+        inputStream.close()
+        outputStream.close()
+        return tempFile
     }
 
 }

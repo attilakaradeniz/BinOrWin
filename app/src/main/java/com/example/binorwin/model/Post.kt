@@ -19,3 +19,7 @@ data class PostCreate(
     val title: String,
     @SerializedName("image_url") val imageUrl: String
 )
+
+data class UploadRespose(
+    val image_url: String
+)

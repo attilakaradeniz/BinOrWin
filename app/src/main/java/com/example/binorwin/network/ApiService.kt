@@ -10,12 +10,16 @@ import retrofit2.http.POST
 import retrofit2.http.Path
 import retrofit2.http.Query
 import com.example.binorwin.model.TokenResponse
+import com.example.binorwin.model.UploadRespose
 import com.example.binorwin.model.UserCreate
 import com.example.binorwin.model.UserResponse
 import retrofit2.http.Field
 import retrofit2.http.FormUrlEncoded
 import retrofit2.http.PUT
 import retrofit2.http.DELETE
+import okhttp3.MultipartBody
+import retrofit2.http.Multipart
+import retrofit2.http.Part
 
 // defining all API endpoints in FastAPI
 interface ApiService {
@@ -79,5 +83,11 @@ interface ApiService {
     suspend fun deleteArgument(
         @Path("argument_id") argumentId: Int
     )
+
+    @Multipart
+    @POST("upload/")
+    suspend fun uploadImage(
+        @Part file: MultipartBody.Part
+    ): UploadRespose
 }
 
