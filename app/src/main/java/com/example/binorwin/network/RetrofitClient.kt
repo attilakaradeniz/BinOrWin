@@ -1,6 +1,7 @@
 package com.example.binorwin.network
 
 import android.content.Context
+import com.example.binorwin.BuildConfig
 import com.example.binorwin.utils.TokenManager
 import okhttp3.Interceptor
 import okhttp3.OkHttpClient
@@ -9,8 +10,7 @@ import retrofit2.converter.gson.GsonConverterFactory
 
 object RetrofitClient {
     // pi (Tailscale) IP address!
-    private const val BASE_URL = "http://100.112.97.88:8000/"
-
+    private val BASE_URL = BuildConfig.API_BASE_URL
     // Hold a reference to our safe (TokenManager)
     private var tokenManager: TokenManager? = null
 
