@@ -208,5 +208,21 @@ class MainViewModel : ViewModel() {
         }
     }
 
+    // Function to update post title
+    fun updatePostTitle(postId: Int, newTitle: String) {
+        viewModelScope.launch {
+            try {
+                val updateData = com.example.binorwin.model.PostUpdate(title = newTitle)
+                val response = com.example.binorwin.network.RetrofitClient.apiService.updatePost(postId, updateData)
+                if (response.isSuccessful) {
+                    // Refresh the feed to show the new title
+                    refreshPosts()
+                }
+            } catch (e: Exception) {
+                android.util.Log.e("EditError", "Error updating post: ${e.message}")
+            }
+        }
+    }
+
 
 }

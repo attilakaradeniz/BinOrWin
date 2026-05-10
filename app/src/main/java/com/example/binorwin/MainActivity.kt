@@ -174,7 +174,7 @@ fun MainScreen(viewModel: MainViewModel, onLogout: () -> Unit) {
                                 showBottomSheet = true
                             }, onDeletePost = { postId -> viewModel.deletePost(postId)
                                   
-                            }
+                            }, onEditPost = { postId, newTitle -> viewModel.updatePostTitle(postId, newTitle) }
                         )
                     }
                 }
@@ -223,23 +223,25 @@ fun MainScreen(viewModel: MainViewModel, onLogout: () -> Unit) {
 
 
 @Composable
-fun PostList(posts: List<Post>, onVote: (Int, String) -> Unit, onDiscussClick: (Int) -> Unit, onDeletePost: (Int) -> Unit) {
+fun PostList(posts: List<Post>, onVote: (Int, String) -> Unit, onDiscussClick: (Int) -> Unit, onDeletePost: (Int) -> Unit, onEditPost: (Int, String) -> Unit) {
     LazyColumn(
         modifier = Modifier.fillMaxSize(),
         contentPadding = PaddingValues(16.dp),
         verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
         items(posts) { post ->
-            PostCard(post = post, onVote = onVote, onDiscussClick = { onDiscussClick(post.id) }, onDeletePost = { onDeletePost(post.id) })
+            PostCard(post = post, onVote = onVote, onDiscussClick = { onDiscussClick(post.id) }, onDeletePost = { onDeletePost(post.id) }, onEditPost = { newTitle -> onEditPost(post.id, newTitle) } )
         }
     }
 }
 
 @Composable
 // postcard
-fun PostCard(post: Post, onVote: (Int, String) -> Unit, onDiscussClick: () -> Unit, onDeletePost: () -> Unit) {
+fun PostCard(post: Post, onVote: (Int, String) -> Unit, onDiscussClick: () -> Unit, onDeletePost: () -> Unit, onEditPost: (String) -> Unit) {
     // State to control the delete confirmation dialog
     var showDeleteConfirmDialog by remember { mutableStateOf(false) }
+    var showEditDialog by remember { mutableStateOf(false) }
+    var editTitleText by remember { mutableStateOf(post.title) }
 
     Card(
         modifier = Modifier.fillMaxWidth(),
@@ -266,6 +268,24 @@ fun PostCard(post: Post, onVote: (Int, String) -> Unit, onDiscussClick: () -> Un
 
                 // Show DELETE icon ONLY if the current logged-in user owns this post
                 if (post.owner?.username == RetrofitClient.getUserName()) {
+
+                    Row {
+                        IconButton(
+                            onClick = {
+                                editTitleText = post.title
+                                showEditDialog = true
+                            },
+                            modifier = Modifier.size(32.dp)
+                        ) {
+                            Icon(
+                                Icons.Default.Edit,
+                                contentDescription = "Edit Post",
+                                tint = MaterialTheme.colorScheme.primary,
+                                modifier = Modifier.size(22.dp)
+                            )
+                        }
+
+
                     IconButton(
                         onClick = { showDeleteConfirmDialog = true },
                         modifier = Modifier.size(32.dp)
@@ -278,8 +298,10 @@ fun PostCard(post: Post, onVote: (Int, String) -> Unit, onDiscussClick: () -> Un
                     }
                 }
             }
+            }
 
             Spacer(modifier = Modifier.height(8.dp))
+
 
             AsyncImage(
                 model = post.imageUrl,
@@ -287,6 +309,18 @@ fun PostCard(post: Post, onVote: (Int, String) -> Unit, onDiscussClick: () -> Un
                 modifier = Modifier.fillMaxWidth().height(250.dp),
                 contentScale = ContentScale.Crop
             )
+
+
+//            AsyncImage(
+//                model = post.imageUrl,
+//                contentDescription = "Post Image",
+//                modifier = Modifier.fillMaxWidth().height(300.dp),
+                //contentScale = ContentScale.Fit
+//                contentScale = ContentScale.FillWidth
+
+//                modifier = Modifier.fillMaxWidth().wrapContentHeight(),
+//                contentScale = ContentScale.FillWidth
+//            )
 
             Spacer(modifier = Modifier.height(16.dp))
 
@@ -336,6 +370,34 @@ fun PostCard(post: Post, onVote: (Int, String) -> Unit, onDiscussClick: () -> Un
             },
             dismissButton = {
                 TextButton(onClick = { showDeleteConfirmDialog = false }) { Text("Cancel") }
+            }
+        )
+    }
+    // edit post dialog
+    if (showEditDialog) {
+        AlertDialog(
+            onDismissRequest = { showEditDialog = false },
+            title = { Text("Edit Post Title") },
+            text = {
+                OutlinedTextField(
+                    value = editTitleText,
+                    onValueChange = { editTitleText = it },
+                    modifier = Modifier.fillMaxWidth(),
+                    label = { Text("Title") }
+                )
+            },
+            confirmButton = {
+                TextButton(onClick = {
+                    if (editTitleText.isNotBlank()) {
+                        onEditPost(editTitleText)
+                        showEditDialog = false
+                    }
+                }) {
+                    Text("Save")
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showEditDialog = false }) { Text("Cancel") }
             }
         )
     }

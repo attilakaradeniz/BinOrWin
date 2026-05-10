@@ -23,3 +23,8 @@ data class PostCreate(
 data class UploadRespose(
     val image_url: String
 )
+
+// Data class for updating a post
+data class PostUpdate(
+    val title: String
+)

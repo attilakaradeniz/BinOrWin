@@ -95,5 +95,13 @@ interface ApiService {
     suspend fun deletePost(
         @Path("post_id") postId: Int
     ): retrofit2.Response<Unit> // instead of Any
+
+    // Update a post title
+    @PUT("posts/{post_id}")
+    suspend fun updatePost(
+        @Path("post_id") postId: Int,
+        @Body postUpdate: com.example.binorwin.model.PostUpdate
+    ): retrofit2.Response<Unit>
 }
+
 
