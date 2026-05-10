@@ -19,6 +19,7 @@ import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.Send
 import androidx.compose.material3.*
+import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -159,23 +160,40 @@ fun MainScreen(viewModel: MainViewModel, onLogout: () -> Unit) {
             // SHOW CONTENT BASED ON SELECTED TAB
             when (currentTab) {
                 "home" -> {
-                    // feed
-                    if (viewModel.posts.isEmpty()) {
-                        Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                            Text("No posts yet.")
+                    PullToRefreshBox(
+                        isRefreshing = viewModel.isRefreshing,
+                        onRefresh = { viewModel.refreshPosts() },
+                        modifier = Modifier.fillMaxSize()
+                    ) {
+                        // feed
+                        if (viewModel.posts.isEmpty()) {
+                            Box(
+                                modifier = Modifier.fillMaxSize(),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Text("No posts yet.")
+                            }
+                        } else {
+                            PostList(
+                                posts = viewModel.posts,
+                                onVote = { postId, type -> viewModel.vote(postId, type) },
+                                onDiscussClick = { postId ->
+                                    selectedPostId = postId
+                                    viewModel.fetchArguments(postId)
+                                    showBottomSheet = true
+                                },
+                                onDeletePost = { postId ->
+                                    viewModel.deletePost(postId)
+
+                                },
+                                onEditPost = { postId, newTitle ->
+                                    viewModel.updatePostTitle(
+                                        postId,
+                                        newTitle
+                                    )
+                                }
+                            )
                         }
-                    } else {
-                        PostList(
-                            posts = viewModel.posts,
-                            onVote = { postId, type -> viewModel.vote(postId, type) },
-                            onDiscussClick = { postId ->
-                                selectedPostId = postId
-                                viewModel.fetchArguments(postId)
-                                showBottomSheet = true
-                            }, onDeletePost = { postId -> viewModel.deletePost(postId)
-                                  
-                            }, onEditPost = { postId, newTitle -> viewModel.updatePostTitle(postId, newTitle) }
-                        )
                     }
                 }
                 "add" -> {
